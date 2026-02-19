@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.app.ecommerce.DTO.ProductDTO;
@@ -16,89 +17,91 @@ import com.app.ecommerce.model.User;
 import com.app.ecommerce.service.ProductService;
 
 @Service
-public class ProductServiceImpl implements ProductService{
+public class ProductServiceImpl implements ProductService {
 	
 	@Autowired
-	private ProductRepository productRepository;
+	private ProductRepository prodRepo;
 
 	@Override
 	public Product addProduct(Product productObj) throws ProductException {
-		
-			
-			// Check if product already exists (if ID is provided)
-		    if (productObj.getProductId() != null) {
-		        Optional<Product> existingProduct =
-		                productRepository.findById(productObj.getProductId());
-
-		        if (existingProduct.isPresent()) {
-		            throw new ProductException("Product Already Exists");
-		        }
-		    }
-
-		    Product newProduct = new Product();
-		    newProduct.setName(productObj.getName());
-		    newProduct.setDescription(productObj.getDescription());
-		    newProduct.setPrice(productObj.getPrice());
-		    newProduct.setCategory(productObj.getCategory());
-		    newProduct.setImageUrl(productObj.getImageUrl());
-		    newProduct.setAvailble(productObj.isAvailble());
-
-		    return productRepository.save(newProduct);
+		if(productObj==null) {
+			throw new ProductException("Product Input is Empty");
 		}
-	
+		return prodRepo.save(productObj); //Insert the data into Product Table
+	}
 
 	@Override
 	public Product updateProduct(Integer productId, ProductDTO productdto) throws ProductException {
-		// TODO Auto-generated method stub
-		return null;
+
+		Product dbProduct=prodRepo.findById(productId).
+						orElseThrow(()-> new ProductException("ProductID Not Found"));
+		
+		dbProduct.setDescription(productdto.getDescription());
+		dbProduct.setImageUrl(productdto.getImageUrl());
+		dbProduct.setPrice(productdto.getPrice());
+		dbProduct.setCategory(productdto.getCategory());
+		dbProduct.setName(productdto.getName());
+		
+		
+		return prodRepo.save(dbProduct);//This will trigger update statement
 	}
 
 	@Override
 	public List<Product> getAllProducts() throws ProductException {
-		try {
-			List<Product> productList=productRepository.findAll();
-			if(productList.isEmpty()) {
-				throw new OrderException("No Orders Found in the System");
-			}
-			return productList;
-			
-		}catch(Exception ex) {
-			throw new OrderException("Exception in Fetching Order Details"+ ex.getMessage());
+		List<Product> prdList= prodRepo.findAll();
+		if(prdList.isEmpty()) {
+			throw new ProductException("No Products available in Database");
 		}
+		return prdList;
 	}
 
 	@Override
 	public List<Product> getAllProducts(String prdName) throws ProductException {
-
-		return null;
+		List<Product> prdList= prodRepo.findByName(prdName);
+		if(prdList.isEmpty()) {
+			throw new ProductException("No Products available in Database");
+		}
+		return prdList;
 	}
 
 	@Override
 	public List<Product> getAllProductsByCategory(String categoryName) throws ProductException {
-		// TODO Auto-generated method stub
-		return null;
+		List<Product> prdList= prodRepo.getProductsByCategory(categoryName);
+		if(prdList.isEmpty()) {
+			throw new ProductException("No Products available in Database");
+		}
+		return prdList;
 	}
 
 	@Override
 	public List<Product> getAllProducts(String keyword, String sortDirection, String sortBy) throws ProductException {
-		// TODO Auto-generated method stub
-		return null;
+		Sort sort=Sort.by(sortDirection.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC);
+		 List<Product>  products;
+		if(keyword != null) {
+			products=prodRepo.findAllByNameContainingIgnoreCase(keyword, sort);
+		}
+		else
+		{
+			products=prodRepo.findAll(sort);
+		}
+		if(products.isEmpty()) {
+			throw new ProductException("No Products available in Database");
+		}
+		return products;
 	}
 
 	@Override
 	public Product getSingleProduct(Integer productId) throws ProductException {
-		// TODO Auto-generated method stub
-		return null;
+		return prodRepo.findById(productId).
+				orElseThrow(()-> new ProductException("ProductID Not Found"));
 	}
 
 	@Override
 	public void removeProduct(Integer productId) throws ProductException {
-		// TODO Auto-generated method stub
+		Product dbProd=prodRepo.findById(productId).
+				orElseThrow(()-> new ProductException("ProductID Not Found"));
+		prodRepo.delete(dbProd);
 		
 	}
-	
-	
-	
-	
-	
+
 }
